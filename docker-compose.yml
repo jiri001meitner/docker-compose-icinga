@@ -115,7 +115,11 @@ services:
     image: icinga/icinga2
     logging: *default-logging
     ports:
-      - 5665:5665
+      - target: 5665
+        published: 5665
+        protocol: tcp
+        mode: host
+        host_ip: "127.0.0.2"
     volumes:
       - icinga2:/data
       - ./icinga2.conf.d:/custom_data/custom.conf.d
@@ -148,7 +152,11 @@ services:
     logging: *default-logging
     image: icinga/icingaweb2
     ports:
-      - 8080:8080
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
+        host_ip: "127.0.0.3"
     # Restart Icinga Web container automatically since we have to wait for the database to be ready.
     # Please note that this needs a more sophisticated solution.
     restart: on-failure
