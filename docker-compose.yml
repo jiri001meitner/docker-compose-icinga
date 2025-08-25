@@ -69,8 +69,15 @@ x-logging:
     max-size: "1M"
 
 networks:
-  default:
-    name: icinga-playground
+  net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-icinga
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.29.0.0/16
+          gateway: 172.29.0.1
 
 services:
   director:
@@ -92,6 +99,9 @@ services:
     restart: on-failure
     volumes:
       - icingaweb:/data
+    networks:
+      net:
+        ipv4_address: 172.29.0.10
 
   # The Icinga 2 docker image does not support configuration via env vars at the moment.
   # So, we have to ship some configs with this little init container. Referenced in depends_on of the icinga2 service.
@@ -105,6 +115,9 @@ services:
       - ./icingadb.conf:/config/icingadb.conf
       - ./icingaweb-api-user.conf:/config/icingaweb-api-user.conf
       - ./init-icinga2.sh:/config/init-icinga2.sh
+    networks:
+      net:
+        ipv4_address: 172.29.0.11
 
   icinga2:
     command: [ "sh", "-c", "sleep 5 ; icinga2 daemon" ]
@@ -119,6 +132,9 @@ services:
     volumes:
       - icinga2:/data
       - ./icinga2.conf.d:/custom_data/custom.conf.d
+    networks:
+      net:
+        ipv4_address: 172.29.0.12
 
   icingadb:
     environment:
@@ -134,10 +150,16 @@ services:
       - icingadb-redis
     image: icinga/icingadb
     logging: *default-logging
+    networks:
+      net:
+        ipv4_address: 172.29.0.13
 
   icingadb-redis:
     image: redis
     logging: *default-logging
+    networks:
+      net:
+        ipv4_address: 172.29.0.14
 
   icingaweb:
     depends_on:
@@ -154,6 +176,9 @@ services:
     restart: on-failure
     volumes:
       - icingaweb:/data
+    networks:
+      net:
+        ipv4_address: 172.29.0.15
 
   mysql:
     image: mariadb:10.7
@@ -167,6 +192,9 @@ services:
     volumes:
       - mysql:/var/lib/mysql
       - ./env/mysql/:/docker-entrypoint-initdb.d/
+    networks:
+      net:
+        ipv4_address: 172.29.0.16
 
 volumes:
   icinga2:
