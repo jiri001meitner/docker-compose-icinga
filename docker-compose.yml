@@ -130,7 +130,7 @@ services:
         published: 5665
         protocol: tcp
         mode: host
-        host_ip: "127.0.0.2"
+        host_ip: "127.0.0.3"
     volumes:
       - icinga2:/data
       - ./icinga2.conf.d:/custom_data/custom.conf.d
@@ -190,7 +190,7 @@ services:
     image: mariadb:10.7
     command: --default-authentication-plugin=mysql_native_password
     environment:
-      MYSQL_RANDOM_ROOT_PASSWORD: 1
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-icingaroot}
       ICINGADB_MYSQL_PASSWORD: ${ICINGADB_MYSQL_PASSWORD:-icingadb}
       ICINGAWEB_MYSQL_PASSWORD: ${ICINGAWEB_MYSQL_PASSWORD:-icingaweb}
       ICINGA_DIRECTOR_MYSQL_PASSWORD: ${ICINGA_DIRECTOR_MYSQL_PASSWORD:-director}
