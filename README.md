@@ -7,8 +7,8 @@ Ensure you have the latest Docker and docker-compose versions and
 then just run `docker-compose -p icinga-playground up` in order to start the Icinga stack.
 
 Icinga Web is provided on **127.0.0.3:8080** and you can access the Icinga 2 API on **127.0.0.3:5665**.
-The MySQL service uses the root password defined by the `MYSQL_ROOT_PASSWORD`
-environment variable (default: `icingaroot`).
+The MariaDB service runs version **11.8** and uses the root password defined by the
+`MYSQL_ROOT_PASSWORD` environment variable (default: `icingaroot`).
 The default user of Icinga Web is `icingaadmin` with password `icinga` and
 the default user of the Icinga 2 API for Web is `icingaweb` with password `icingaweb`.
 
