@@ -102,14 +102,6 @@ services:
     networks:
       net:
         ipv4_address: 172.29.0.10
-    extra_hosts:
-      - "mariadb.icinga:172.29.0.10"
-      - "redis.icinga:172.29.0.11"
-      - "db.icinga:172.29.0.12"
-      - "icingainit.icinga:172.29.0.13"
-      - "web.icinga:172.29.0.14"
-      - "api.icinga:172.29.0.15"
-      - "director.icinga:172.29.0.16"
 
   icingadb-redis:
     hostname: redis.icinga
@@ -124,14 +116,6 @@ services:
     networks:
       net:
         ipv4_address: 172.29.0.11
-    extra_hosts:
-      - "mariadb.icinga:172.29.0.10"
-      - "redis.icinga:172.29.0.11"
-      - "db.icinga:172.29.0.12"
-      - "icingainit.icinga:172.29.0.13"
-      - "web.icinga:172.29.0.14"
-      - "api.icinga:172.29.0.15"
-      - "director.icinga:172.29.0.16"
 
   icingadb:
     hostname: db.icinga
@@ -162,14 +146,6 @@ services:
     networks:
       net:
         ipv4_address: 172.29.0.12
-    extra_hosts:
-      - "mariadb.icinga:172.29.0.10"
-      - "redis.icinga:172.29.0.11"
-      - "db.icinga:172.29.0.12"
-      - "icingainit.icinga:172.29.0.13"
-      - "web.icinga:172.29.0.14"
-      - "api.icinga:172.29.0.15"
-      - "director.icinga:172.29.0.16"
 
   # Jednorázový init kontejner – NESMÍ se restartovat do smyčky
   init-icinga2:
@@ -187,14 +163,6 @@ services:
     networks:
       net:
         ipv4_address: 172.29.0.13
-    extra_hosts:
-      - "mariadb.icinga:172.29.0.10"
-      - "redis.icinga:172.29.0.11"
-      - "db.icinga:172.29.0.12"
-      - "icingainit.icinga:172.29.0.13"
-      - "web.icinga:172.29.0.14"
-      - "api.icinga:172.29.0.15"
-      - "director.icinga:172.29.0.16"
 
   icingaweb:
     hostname: web.icinga
@@ -231,14 +199,6 @@ services:
     networks:
       net:
         ipv4_address: 172.29.0.14
-    extra_hosts:
-      - "mariadb.icinga:172.29.0.10"
-      - "redis.icinga:172.29.0.11"
-      - "db.icinga:172.29.0.12"
-      - "icingainit.icinga:172.29.0.13"
-      - "web.icinga:172.29.0.14"
-      - "api.icinga:172.29.0.15"
-      - "director.icinga:172.29.0.16"
 
   icinga2:
     hostname: api.icinga
@@ -249,6 +209,9 @@ services:
       init-icinga2:
         condition: service_completed_successfully
       icingadb-redis:
+        condition: service_healthy
+        restart: true
+      icingaweb:
         condition: service_healthy
         restart: true
     restart: unless-stopped
@@ -274,14 +237,6 @@ services:
     networks:
       net:
         ipv4_address: 172.29.0.15
-    extra_hosts:
-      - "mariadb.icinga:172.29.0.10"
-      - "redis.icinga:172.29.0.11"
-      - "db.icinga:172.29.0.12"
-      - "icingainit.icinga:172.29.0.13"
-      - "web.icinga:172.29.0.14"
-      - "api.icinga:172.29.0.15"
-      - "director.icinga:172.29.0.16"
 
   director:
     hostname: director.icinga
@@ -303,6 +258,9 @@ services:
       mysql:
         condition: service_healthy
         restart: true
+      icingaweb:
+        condition: service_healthy
+        restart: true
       icinga2:
         condition: service_healthy
         restart: true
@@ -322,11 +280,3 @@ services:
     networks:
       net:
         ipv4_address: 172.29.0.16
-    extra_hosts:
-      - "mariadb.icinga:172.29.0.10"
-      - "redis.icinga:172.29.0.11"
-      - "db.icinga:172.29.0.12"
-      - "icingainit.icinga:172.29.0.13"
-      - "web.icinga:172.29.0.14"
-      - "api.icinga:172.29.0.15"
-      - "director.icinga:172.29.0.16"

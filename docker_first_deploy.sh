@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 STDERR(){ cat - 1>&2; }
 
+IPV6_ENABLE='false'
+
 help1(){ { echo "usage:"; echo "${0##*/} /path/to/dir/"; } | STDERR; exit 1; }
 help2(){ echo "This script requires the docker compose plugin version 2 to be installed." | STDERR; exit 2; }
 help3(){ echo "The directory does not contain a docker-compose.yml file." | STDERR; exit 3; }
 help4(){ echo "The docker-compose.yml file contains errors." | STDERR; exit 4; }
+help5(){ echo "The nftables package appears to be missing. Please install it first." | STDERR; exit 5; }
+help6(){ { echo "The jq package appears to be missing.";
+         echo "This script uses it to modify /etc/docker/daemon.json. Please install it first."; } | STDERR; exit 6; }
+help7(){ echo "You chose not to continue, exiting." | STDERR; exit 7; }
+
 
 (( $# == 1 )) || help1
 
@@ -21,6 +28,11 @@ fi
 
 docker compose config >/dev/null || help4
 
+[[ -f /etc/nftables.conf ]] || help5
+if ! sudo which nft|grep . -q; then help5; fi
+
+if ! jq --version|grep . -q; then help6; fi
+
 APP_NAME="$(basename "${FULL_PATH}")"
 LOG_DIR="${FULL_PATH}/logs/"
 LOG_FILE="${LOG_DIR}/stdout_stderr.log"
@@ -28,6 +40,39 @@ NFTABLES="${FULL_PATH}/etc/nftables.d/"
 NFT_DOCKER_GLOBAL="${NFTABLES}/2_docker_global.conf"
 NFT_APP_TMP="${NFTABLES}/3_docker_${APP_NAME}_tmp.conf"
 NFT_APP_FINAL="${NFTABLES}/3_docker_${APP_NAME}.conf"
+DOCKER_SETTINGS_OLD="$(sudo cat /etc/docker/daemon.json|jq -c --||echo '{}')"
+if [[ "${IPV6_ENABLE,,}" == "true" || "${IPV6_ENABLE,,}" == "yes" ]]; then
+  DOCKER_SETTINGS_TEMP="$(
+  printf '%s' "${DOCKER_SETTINGS_OLD}" | jq -c '
+    .experimental = true
+    | .iptables    = true
+    | .ip6tables   = true
+    | .ipv6        = true
+    | (if has("fixed-cidr-v6") then . else . + {"fixed-cidr-v6":"fd00:dead:beef::/64"} end)
+  '
+)"; else
+  DOCKER_SETTINGS_TEMP="$(
+  printf '%s' "${DOCKER_SETTINGS_OLD}" | jq -c '
+    .experimental = true
+    | .iptables    = true
+    | .ip6tables   = false
+    | .ipv6        = false
+    | (if has("fixed-cidr-v6") then . else . + {"fixed-cidr-v6":"fd00:dead:beef::/64"} end)
+  '
+)"
+fi
+DOCKER_SETTINGS_NEW="$(
+  printf '%s' "${DOCKER_SETTINGS_TEMP}" | jq -c '
+    .iptables  = false
+    | .ip6tables = false
+  '
+)"
+
+echo "Warning: This script will stop all running containers and then deploy nftables rules for the built application.  It will also generate an archive of logs from the execution and containers for debugging purposes."
+read -erp 'Continue? ' -i 'yes' continue
+if ! [[ ${continue} == 'yes' ]]; then
+   help7
+fi
 
 rm -rf "${LOG_DIR}" "${NFTABLES}"
 mkdir -p "${LOG_DIR}" "${NFTABLES}"
@@ -68,42 +113,51 @@ nft_cleaning() { awk '{ gsub(/xt target "MASQUERADE"/,"masquerade");
 gsub(/counter packets [0-9]+ bytes [0-9]+/,"counter");
 print }'; }
 
+# list of running containers
+mapfile -t containers < <(docker ps -q)
+conteiners_list="$(docke ps|awk '{print $2}')"
+
+# stoping containers
+for container in "${containers[@]}"; do
+    echo "All running containers must be stopped and destroyed to obtain the firewall clean rules for the new application."
+    echo "Stopping container... ${container}"
+    docker ps|grep --color "${container}"|awk '{print $2}'
+    CMD docker stop "${container}"
+done
 
 # decomissioning
 docker system prune -f
 docker compose down -v
-docker system prune -f
 
 # building
 CMD sudo nft flush ruleset
-CMD sudo systemctl daemon-reload
-CMD sudo systemctl stop docker.service docker.socket
-CMD sudo systemctl start docker.service docker.socket
+echo "${DOCKER_SETTINGS_TEMP}"|sudo tee /etc/docker/daemon.json
+CMD sudo systemctl restart docker
 sudo nft list ruleset 2>/dev/null|nft_cleaning|tee "${NFT_DOCKER_GLOBAL}"
 CMD docker compose up -d
 sudo nft list ruleset 2>/dev/null|nft_cleaning|tee "${NFT_APP_TMP}"
 "${FULL_PATH}/nft_diff.py" "${NFT_DOCKER_GLOBAL}" "${NFT_APP_TMP}" > "${NFT_APP_FINAL}"
 rm "${NFT_APP_TMP}"
 
-read -erp 'Do you want to deploy nftables rules to /etc/nftables.d now? Yes or No: ' -i 'Yes' nft_deploy
-if [[ ${nft_deploy} == Yes ]]; then
-   sudo mkdir -pv /etc/nftables.d/
-   CMD sudo cp -v "${NFT_DOCKER_GLOBAL}" /etc/nftables.d/
-   CMD sudo cp -v "${NFT_APP_FINAL}" "/etc/nftables.d/3_docker_${APP_NAME}.conf"
+sudo mkdir -pv /etc/nftables.d/
+CMD sudo cp -v "${NFT_DOCKER_GLOBAL}" /etc/nftables.d/
+CMD sudo cp -v "${NFT_APP_FINAL}" "/etc/nftables.d/3_docker_${APP_NAME}.conf"
    if ! grep  '/etc/nftables.d/\*.conf' /etc/nftables.conf|grep '^include' -q; then
       echo 'include "/etc/nftables.d/*.conf"'|sudo tee -a /etc/nftables.conf
-   CMD sudo systemctl restart nftables
+      sudo systemctl restart nftables
    fi
-   echo "To remove iptables permissions for Docker, you must also modify /etc/docker/daemon.json."
-fi
-
+echo "${DOCKER_SETTINGS_NEW}"|jq -r|sudo tee /etc/docker/daemon.json
 
 CMD echo "Now sleeping for a minute..."
 CMD sleep 60
-docker compose ps
+
 for s in $(docker compose ps -a --services); do
   docker compose logs --no-color --timestamps "$s"|tail -n500|tee -a > "${LOG_DIR}/${s}.log"
 done
+docker compose ps
+
+echo "Remember to start stopped containers using docker compose up -d in their docker compose directory"
+echo "${conteiners_list}"
 
 archive="$(echo "${HOME}/${APP_NAME}_$(TD).tgz"|tr ':' '-')"
 echo "Now i create a backup file with logs for chatgpt analysis: ${archive}"
