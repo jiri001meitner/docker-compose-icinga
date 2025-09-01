@@ -15,7 +15,12 @@ jobs:
       - name: docker_first_deploy
         shell: bash
         run: |
-          docker_first_deploy.sh
+          if ! [[ -f /etc/nftables.conf ]]; then
+          apt install -y nftables
+          systemctl enalbe --now nftables
+          ./docker_first_deploy.sh; else
+          ./docker_first_deploy.sh
+          fi
 
       - name: Compose up -d
         run: |
