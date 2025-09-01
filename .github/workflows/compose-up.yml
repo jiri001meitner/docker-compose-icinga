@@ -18,8 +18,8 @@ jobs:
           if ! [[ -f /etc/nftables.conf ]]; then
           apt install -y nftables
           systemctl enalbe --now nftables
-          ./docker_first_deploy.sh; else
-          ./docker_first_deploy.sh
+          ./docker_first_deploy.sh ./; else
+          ./docker_first_deploy.sh ./
           fi
 
       - name: Compose up -d
