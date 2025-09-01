@@ -1,0 +1,67 @@
+name: Compose up (smoke)
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  up:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker versions
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Compose up -d
+        run: |
+          docker compose -f docker-compose.yml up -d
+
+      - name: Assert running & not unhealthy
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mapfile -t CIDS < <(docker compose -f docker-compose.yml ps -q)
+          if [ ${#CIDS[@]} -eq 0 ]; then
+            echo "::error::No containers started by compose."
+            exit 1
+          fi
+
+          failed=0
+          for cid in "${CIDS[@]}"; do
+            name=$(docker inspect -f '{{.Name}}' "$cid" | sed 's#^/##')
+            state=$(docker inspect -f '{{.State.Status}}' "$cid")
+            health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid")
+
+            if [ "$state" != "running" ]; then
+              echo "::error::$name not running (state=$state)."
+              failed=1
+            fi
+            if [ "$health" = "unhealthy" ]; then
+              echo "::error::$name health=unhealthy."
+              failed=1
+            fi
+          done
+
+          if [ $failed -ne 0 ]; then
+            echo "--- compose ps ---"
+            docker compose -f docker-compose.yml ps || true
+            echo "--- logs (tail 200) ---"
+            for cid in "${CIDS[@]}"; do
+              n=$(docker inspect -f '{{.Name}}' "$cid" | sed 's#^/##')
+              echo ">>> $n"
+              docker logs --tail=200 "$cid" || true
+            done
+            exit 1
+          fi
+
+          echo "✅ All containers are running and none are unhealthy."
+
+      - name: Teardown
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml down -v --remove-orphans
