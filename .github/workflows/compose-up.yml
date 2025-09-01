@@ -15,16 +15,13 @@ jobs:
       - name: docker_first_deploy
         shell: bash
         run: |
-          if ! [[ -f /etc/nftables.conf ]]; then
           apt install -y nftables
-          systemctl enalbe --now nftables
-          ./docker_first_deploy.sh ./; else
+          systemctl enable --now nftables
           ./docker_first_deploy.sh ./
-          fi
 
       - name: Compose up -d
         run: |
-          docker compose -f docker-compose.yml up -d
+          docker compose up -d
 
       - name: Assert running & not unhealthy
         shell: bash
