@@ -1,0 +1,48 @@
+name: ShellCheck
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck on all shell scripts
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          # Nasbírej .sh + soubory se shell shebangem
+          mapfile -t FILES < <(
+            git ls-files -z \
+            | xargs -0 -I{} sh -c '
+                f="{}"
+                case "$f" in
+                  *.sh) echo "$f"; exit 0 ;;
+                esac
+                # Má shebang a volá nějaký shell?
+                if head -c 2 "$f" | grep -q "^#!" && head -n1 "$f" | grep -Eq "/(env +)?(ba|z|k|)sh( |$)|/(dash|ksh|zsh)( |$)"; then
+                  echo "$f"
+                fi
+              ' \
+            | sort -u
+          )
+
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No shell scripts detected. Skipping."
+            exit 0
+          fi
+
+          echo "Checking ${#FILES[@]} files:"
+          printf ' - %s\n' "${FILES[@]}"
+
+          # -x: sleduj soubory includované 'source' (užitečné u knihoven funkcí)
+          shellcheck -x "${FILES[@]}"
