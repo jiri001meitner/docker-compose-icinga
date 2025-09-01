@@ -78,6 +78,7 @@ DOCKER_SETTINGS_NEW="$(
 )"
 
 echo "Warning: This script will stop all running containers and then deploy nftables rules for the built application.  It will also generate an archive of logs from the execution and containers for debugging purposes."
+echo "${HOSTNAME}"
 read -erp 'Continue? ' -i 'yes' continue
 if ! [[ ${continue} == 'yes' ]]; then
    help7
