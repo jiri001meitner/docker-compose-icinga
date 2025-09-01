@@ -213,15 +213,14 @@ def _parse_table_body_into(body: str, table: Table) -> None:
         indent, cname = match.group(1), match.group(2)
         brace_start = idx + match.end() - 1
         brace_end = _find_matching_brace(body, brace_start)
-        chain_block = body[brace_start + 1 : brace_end]
 
         chain = Chain(name=cname, indent=indent)
 
         # Preserve order; split header lines from rules and track blank line.
         saw_header = False
         pending_blank = False
-        for raw in chain_block.splitlines():
-            line = raw.rstrip()
+        for line in body[brace_start + 1 : brace_end].splitlines():
+            line = line.rstrip()
             if not line.strip():
                 if saw_header and not chain.rules:
                     pending_blank = True
