@@ -15,7 +15,7 @@ jobs:
       - name: docker_first_deploy
         shell: bash
         run: |
-          apt install -y nftables
+          sudo apt install -y nftables
           systemctl enable --now nftables
           ./docker_first_deploy.sh ./
 
