@@ -11,6 +11,7 @@ help5(){ echo "The nftables package appears to be missing. Please install it fir
 help6(){ { echo "The jq package appears to be missing.";
          echo "This script uses it to modify /etc/docker/daemon.json. Please install it first."; } | STDERR; exit 6; }
 help7(){ echo "You chose not to continue, exiting." | STDERR; exit 7; }
+help8(){ echo "The 'nftables.service' must be enabled and active." | STDERR; exit 8; }
 
 
 (( $# == 1 )) || help1
@@ -32,6 +33,14 @@ docker compose config >/dev/null || help4
 if ! sudo which nft|grep . -q; then help5; fi
 
 if ! jq --version|grep . -q; then help6; fi
+
+NFTABLES_STATUS="$(systemctl status nftables.service)"
+if ! echo "${NFTABLES_STATUS}"|grep -q 'enabled; preset: enabled'; then
+   help8
+fi
+if ! echo "${NFTABLES_STATUS}"|grep -q 'Active: active'; then
+   help8
+fi
 
 APP_NAME="$(basename "${FULL_PATH}")"
 LOG_DIR="${FULL_PATH}/logs/"
