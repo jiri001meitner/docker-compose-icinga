@@ -2,16 +2,25 @@
 STDERR(){ cat - 1>&2; }
 
 IPV6_ENABLE='false'
-
 help1(){ { echo "usage:"; echo "${0##*/} /path/to/dir/"; } | STDERR; exit 1; }
 help2(){ echo "This script requires the docker compose plugin version 2 to be installed." | STDERR; exit 2; }
 help3(){ echo "The directory does not contain a docker-compose.yml file." | STDERR; exit 3; }
 help4(){ echo "The docker-compose.yml file contains errors." | STDERR; exit 4; }
-help5(){ echo "The nftables package appears to be missing. Please install it first." | STDERR; exit 5; }
+help5(){ echo "The nftables package appears to be missing. Please install it first. OR you can build icinga with docker compose up -d, don't use this script ${0} without nftables." | STDERR; exit 5; }
 help6(){ { echo "The jq package appears to be missing.";
          echo "This script uses it to modify /etc/docker/daemon.json. Please install it first."; } | STDERR; exit 6; }
 help7(){ echo "You chose not to continue, exiting." | STDERR; exit 7; }
-help8(){ echo "The 'nftables.service' must be enabled and active." | STDERR; exit 8; }
+help8(){ echo "The 'nftables.service' must be enabled and active. OR you can build icinga with docker compose up -d, don't use this script ${0} without nftables." | STDERR; exit 8; }
+
+usage(){ {
+        echo "Use this script ${0} only if you're using nftables."
+        echo 'Note that you will have to manually restart any currently running Docker containers.'
+        echo 'If you are using traditional iptables, run `docker compose up -d` instead.'
+        }|STDERR; help1; }
+
+case "${1:-}" in
+  -h|--help|help) usage ;;
+esac
 
 
 (( $# == 1 )) || help1
