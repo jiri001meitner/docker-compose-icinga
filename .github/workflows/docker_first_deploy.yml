@@ -1,4 +1,4 @@
-name: Compose up (smoke)
+name: docker_first_deploy (smoke)
 
 on:
   push:
