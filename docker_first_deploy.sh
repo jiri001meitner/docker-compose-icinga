@@ -15,13 +15,12 @@ help8(){ echo "The 'nftables.service' must be enabled and active. OR you can bui
 usage(){ {
         echo "Use this script ${0} only if you're using nftables."
         echo 'Note that you will have to manually restart any currently running Docker containers.'
-        echo 'If you are using traditional iptables, run `docker compose up -d` instead.'
+        echo "If you are using traditional iptables, run \`docker compose up -d\` instead."
         }|STDERR; help1; }
 
 case "${1:-}" in
   -h|--help|help) usage ;;
 esac
-
 
 (( $# == 1 )) || help1
 
