@@ -16,7 +16,7 @@ jobs:
         shell: bash
         run: |
           sudo apt install -y nftables
-          systemctl enable --now nftables
+          sudo systemctl enable --now nftables
           ./docker_first_deploy.sh ./
 
       - name: Compose up -d
