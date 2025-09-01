@@ -160,11 +160,8 @@ CMD sudo cp -v "${NFT_APP_FINAL}" "/etc/nftables.d/3_docker_${APP_NAME}.conf"
    fi
 echo "${DOCKER_SETTINGS_NEW}"|jq -r|sudo tee /etc/docker/daemon.json
 
-if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
-   echo "Běžíme v GitHub Actions"; else
-   CMD echo "Now sleeping for a minute..."
-   CMD sleep 60
-fi
+CMD echo "Now sleeping for a minute..."
+CMD sleep 60
 
 for s in $(docker compose ps -a --services); do
   docker compose logs --no-color --timestamps "$s"|tail -n500|tee -a > "${LOG_DIR}/${s}.log"
