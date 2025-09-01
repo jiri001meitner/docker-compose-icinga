@@ -12,9 +12,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Compose up -d
+      - name: docker_first_deploy
+        shell: bash
         run: |
-          docker compose up -d
+          sudo apt install -y nftables
+          sudo systemctl enable --now nftables
+          ./docker_first_deploy.sh ./
+
+      - name: nft list ruleset
+        shell: bash
+        run: |
+          sudo nft list ruleset
 
       - name: Assert running & not unhealthy
         shell: bash
@@ -59,5 +67,6 @@ jobs:
       - name: Teardown
         if: always()
         run: |
-          docker compose -f docker-compose.yml down -v --remove-orphans
+          docker compose down -v
           docker system prune -f
+          sudo rm 'logs' 'etc' /etc/nftables.d/ -rfv

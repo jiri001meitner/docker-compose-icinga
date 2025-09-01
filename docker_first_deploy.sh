@@ -160,8 +160,11 @@ CMD sudo cp -v "${NFT_APP_FINAL}" "/etc/nftables.d/3_docker_${APP_NAME}.conf"
    fi
 echo "${DOCKER_SETTINGS_NEW}"|jq -r|sudo tee /etc/docker/daemon.json
 
-CMD echo "Now sleeping for a minute..."
-CMD sleep 60
+if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+   echo "Běžíme v GitHub Actions"; else
+   CMD echo "Now sleeping for a minute..."
+   CMD sleep 60
+fi
 
 for s in $(docker compose ps -a --services); do
   docker compose logs --no-color --timestamps "$s"|tail -n500|tee -a > "${LOG_DIR}/${s}.log"
@@ -175,5 +178,10 @@ archive="$(echo "${HOME}/${APP_NAME}_$(TD).tgz"|tr ':' '-')"
 echo "Now i create a backup file with logs for chatgpt analysis: ${archive}"
 cd ..
 tar czpf "${archive}" "${APP_NAME}"/
+
+if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+   echo "Běžíme v GitHub Actions"
+   rm -rfv "${archive}"
+fi
 
 exit
