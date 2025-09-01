@@ -10,10 +10,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install ShellCheck
+      - name: Ensure ShellCheck
         run: |
-          sudo apt-get update
-          sudo apt-get install -y shellcheck
+          if ! command -v shellcheck >/dev/null 2>&1; then
+          sudo apt update
+          sudo apt install -y shellcheck
+          fi
+          shellcheck --version
 
       - name: Run ShellCheck on all shell scripts
         shell: bash
