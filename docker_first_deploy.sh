@@ -53,8 +53,10 @@ fi
 APP_NAME="$(basename "${FULL_PATH}")"
 LOG_DIR="${FULL_PATH}/logs/"
 LOG_FILE="${LOG_DIR}/stdout_stderr.log"
-NFTABLES="${FULL_PATH}/etc/nftables.d/"
-NFT_DOCKER_GLOBAL="${NFTABLES}/2_docker_global.conf"
+ETC_NFTABLES='/etc/nftables.d'
+NFTABLES="${FULL_PATH}/${ETC_NFTABLES}/"
+NFT_GLOBAL_NAME='2_docker_global.conf'
+NFT_DOCKER_GLOBAL="${NFTABLES}/${NFT_GLOBAL_NAME}"
 NFT_APP_TMP="${NFTABLES}/3_docker_${APP_NAME}_tmp.conf"
 NFT_APP_FINAL="${NFTABLES}/3_docker_${APP_NAME}.conf"
 DOCKER_SETTINGS_OLD="$(sudo cat /etc/docker/daemon.json|jq -c --||echo '{}')"
@@ -97,7 +99,7 @@ fi
 rm -rf "${LOG_DIR}" "${NFTABLES}"
 mkdir -p "${LOG_DIR}" "${NFTABLES}"
 
-# všechno odteď -> obrazovka + LOG_FILE (append)
+# All output from now on -> screen + LOG_FILE (append)
 exec > >(tee -a "${LOG_FILE}") 2>&1
 
 TD()
@@ -106,18 +108,18 @@ printf '%(%Y-%m-%d-%H:%M:%S)T'
 }
 
 CMD() {
-  local -a cmd=("$@")   # bezpečně uložený příkaz + argumenty
+  local -a cmd=("$@")   # securely stored command and arguments
   local STDO STDR rc RESULT
   STDO="$(mktemp)"; STDR="$(mktemp)"
 
-  # spustit => výstup zrcadlit na obrazovku a zároveň do dočasných souborů
+  # Run command => mirror output to screen and log simultaneously
   if "${cmd[@]}" > >(tee "$STDO") 2> >(tee "$STDR" >&2); then
     rc=0; RESULT='OK ✅'
   else
     rc=$?; RESULT="FAILED ❌ rc=${rc}"
   fi
 
-  # souhrnný řádek
+  # Summary line
   paste \
     <(TD) \
     <(printf "%q " "${cmd[@]}") \
@@ -135,9 +137,9 @@ print }'; }
 
 # list of running containers
 mapfile -t containers < <(docker ps -q)
-conteiners_list="$(docke ps|awk '{print $2}')"
+conteiners_list="$(docker ps|awk '{print $2}')"
 
-# stoping containers
+# stopping containers
 for container in "${containers[@]}"; do
     echo "All running containers must be stopped and destroyed to obtain the firewall clean rules for the new application."
     echo "Stopping container... ${container}"
@@ -145,7 +147,7 @@ for container in "${containers[@]}"; do
     CMD docker stop "${container}"
 done
 
-# decomissioning
+# decommissioning
 docker system prune -f
 docker compose down -v
 
@@ -157,16 +159,16 @@ sudo nft list ruleset 2>/dev/null|nft_cleaning|tee "${NFT_DOCKER_GLOBAL}"
 CMD docker compose up -d
 sudo nft list ruleset 2>/dev/null|nft_cleaning|tee "${NFT_APP_TMP}"
 "${FULL_PATH}/nft_diff.py" "${NFT_DOCKER_GLOBAL}" "${NFT_APP_TMP}" > "${NFT_APP_FINAL}"
-rm "${NFT_APP_TMP}"
+rm -v "${NFT_APP_TMP}"
 
-sudo mkdir -pv /etc/nftables.d/
-CMD sudo cp -v "${NFT_DOCKER_GLOBAL}" /etc/nftables.d/
-CMD sudo cp -v "${NFT_APP_FINAL}" "/etc/nftables.d/3_docker_${APP_NAME}.conf"
+[[ -d ${ETC_NFTABLES} ]] || sudo mkdir -pv "${ETC_NFTABLES}"
+[[ -f ${ETC_NFTABLES}/${NFT_GLOBAL_NAME} ]] || CMD sudo cp -v "${NFT_DOCKER_GLOBAL}" "${ETC_NFTABLES}/${NFT_GLOBAL_NAME}"
+sudo cp -v "${NFT_APP_FINAL}" "${ETC_NFTABLES}/3_docker_${APP_NAME}.conf" # <- force rewrite
    if ! grep  '/etc/nftables.d/\*.conf' /etc/nftables.conf|grep '^include' -q; then
       echo 'include "/etc/nftables.d/*.conf"'|sudo tee -a /etc/nftables.conf
-      sudo systemctl restart nftables
    fi
 echo "${DOCKER_SETTINGS_NEW}"|jq -r|sudo tee /etc/docker/daemon.json
+CMD sudo systemctl restart nftables
 
 CMD echo "Now sleeping for a minute..."
 CMD sleep 60
@@ -185,7 +187,7 @@ cd ..
 tar czpf "${archive}" "${APP_NAME}"/
 
 if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
-   echo "Běžíme v GitHub Actions"
+   echo "We run GitHub Actions"
    rm -rfv "${archive}"
 fi
 

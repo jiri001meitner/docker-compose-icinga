@@ -80,7 +80,6 @@ volumes:
 services:
   mysql:
     hostname: mariadb.icinga
-#    image: mariadb:10.7
     image: mariadb:11.8
     command: --default-authentication-plugin=mysql_native_password
     environment:
@@ -105,7 +104,8 @@ services:
 
   icingadb-redis:
     hostname: redis.icinga
-    image: redis:7
+    image: redis:alpine
+#    image: docker.dragonflydb.io/dragonflydb/dragonfly
     restart: unless-stopped
     logging: *default-logging
     healthcheck:
@@ -113,6 +113,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    depends_on:
+      mysql:  { condition: service_healthy }
     networks:
       net:
         ipv4_address: 172.29.0.11
@@ -135,12 +137,8 @@ services:
       retries: 5
       start_period: 30s
     depends_on:
-      mysql:
-        condition: service_healthy
-        restart: true
-      icingadb-redis:
-        condition: service_healthy
-        restart: true
+      mysql:          { condition: service_healthy }
+      icingadb-redis: { condition: service_healthy }
     restart: unless-stopped
     logging: *default-logging
     networks:
@@ -203,7 +201,8 @@ services:
   icinga2:
     hostname: api.icinga
     image: icinga/icinga2
-    command: [ "sh", "-c", "sleep 5 ; icinga2 daemon" ]
+    command: [ "sh", "-c", "sleep 5; icinga2 daemon" ]
+    entrypoint: []
     environment: *icinga2-environment
     depends_on:
       init-icinga2:
@@ -255,15 +254,29 @@ services:
         echo "Starting Icinga Director daemon."
         icingacli director daemon run
     depends_on:
-      mysql:
-        condition: service_healthy
-        restart: true
-      icingaweb:
-        condition: service_healthy
-        restart: true
-      icinga2:
-        condition: service_healthy
-        restart: true
+#      mysql:
+#        condition: service_healthy
+#        restart: true
+#      icingadb-redis:
+#        condition: service_healthy
+#        restart: true
+#      icingadb:
+#        condition: service_healthy
+#        restart: true
+#      init-icinga2:
+#        condition: service_completed_successfully
+#      icingaweb:
+#        condition: service_healthy
+#        restart: true
+#      icinga2:
+#        condition: service_healthy
+#        restart: true
+      mysql:          { condition: service_healthy }
+      icingadb-redis: { condition: service_healthy }
+      icingadb:       { condition: service_healthy }
+      init-icinga2:   { condition: service_completed_successfully }
+      icinga2:        { condition: service_healthy }
+      icingaweb:      { condition: service_healthy }
     restart: unless-stopped
     logging: *default-logging
     healthcheck:
