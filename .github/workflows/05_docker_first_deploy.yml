@@ -1,4 +1,6 @@
 name: docker_first_deploy (smoke)
+permissions:
+  contents: read
 
 on:
   push:
