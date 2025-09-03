@@ -1,5 +1,8 @@
 name: Compose up (smoke)
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:
