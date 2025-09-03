@@ -3,6 +3,10 @@
 """
 nft_diff.py — vyrobí deklarativní diff nftables: obsah COMPLETE minus GLOBAL.
 
+Nové: Vstupní normalizační filtr (nahrazuje původní bash/awk `nft_cleaning`):
+    - `xt target "MASQUERADE"` → `masquerade`
+    - `counter packets <N> bytes <N>` → `counter`
+
 Vstup:
     GLOBAL.nft  - "globální" pravidla (base)
     COMPLETE.nft- kompletní konfigurace (globální + app)
@@ -50,6 +54,24 @@ def normalize_rule(s: str) -> str:
     if s.endswith(";"):
         s = s[:-1]
     return normalize_spaces(s)
+
+
+def input_filter(text: str) -> str:
+    """Apply same normalization as původní bash `nft_cleaning` na CELÝ vstup.
+
+    - `xt target "MASQUERADE"` → `masquerade`
+    - `counter packets <N> bytes <N>` → `counter`
+
+    Záměrně děláme nahrazení před parsováním, aby se normalizace propsala i do
+    případného výstupu (nové řetězy/pravidla se vypíší už bez šumu).
+    """
+    # 1) MASQUERADE z iptables-nft stylu (Docker) → čisté nftables "masquerade"
+    text = re.sub(r'xt target\s+"MASQUERADE"', 'masquerade', text)
+
+    # 2) Proměnlivé čítače → canonical "counter"
+    text = re.sub(r"\bcounter packets \d+ bytes \d+\b", "counter", text)
+
+    return text
 
 
 # --------------------------- datové modely ---------------------------
@@ -301,6 +323,10 @@ def main(argv: List[str]) -> int:
         return 1
 
     try:
+        # \- vstupní normalizace (nahrazuje bash/awk nft_cleaning)
+        glob_txt = input_filter(glob_txt)
+        comp_txt = input_filter(comp_txt)
+
         base = Ruleset.parse(glob_txt)
         comp = Ruleset.parse(comp_txt)
     except ValueError as exc:

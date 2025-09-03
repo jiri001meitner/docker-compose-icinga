@@ -131,10 +131,6 @@ CMD() {
   return "$rc"
 }
 
-nft_cleaning() { awk '{ gsub(/xt target "MASQUERADE"/,"masquerade");
-gsub(/counter packets [0-9]+ bytes [0-9]+/,"counter");
-print }'; }
-
 # list of running containers
 mapfile -t containers < <(docker ps -q)
 conteiners_list="$(docker ps|awk '{print $2}')"
@@ -155,9 +151,9 @@ docker compose down -v
 CMD sudo nft flush ruleset
 echo "${DOCKER_SETTINGS_TEMP}"|sudo tee /etc/docker/daemon.json
 CMD sudo systemctl restart docker
-sudo nft list ruleset 2>/dev/null|nft_cleaning|tee "${NFT_DOCKER_GLOBAL}"
+sudo nft list ruleset 2>/dev/null|tee "${NFT_DOCKER_GLOBAL}"
 CMD docker compose up -d
-sudo nft list ruleset 2>/dev/null|nft_cleaning|tee "${NFT_APP_TMP}"
+sudo nft list ruleset 2>/dev/null|tee "${NFT_APP_TMP}"
 "${FULL_PATH}/nft_diff.py" "${NFT_DOCKER_GLOBAL}" "${NFT_APP_TMP}" > "${NFT_APP_FINAL}"
 rm -v "${NFT_APP_TMP}"
 
