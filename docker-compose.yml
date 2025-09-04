@@ -69,8 +69,8 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: 172.29.0.0/16
-          gateway: 172.29.0.1
+        - subnet: "${V4_PREFIX:-172.29.0}.0/24"
+          gateway: "${V4_PREFIX:-172.29.0}.1"
 
 volumes:
   icinga2:
@@ -100,7 +100,7 @@ services:
       - ./env/mysql/:/docker-entrypoint-initdb.d/
     networks:
       net:
-        ipv4_address: 172.29.0.10
+        ipv4_address: "${V4_PREFIX:-172.29.0}.10"
 
   icingadb-redis:
     hostname: redis.icinga
@@ -117,7 +117,7 @@ services:
       mysql:  { condition: service_healthy }
     networks:
       net:
-        ipv4_address: 172.29.0.11
+        ipv4_address: "${V4_PREFIX:-172.29.0}.11"
 
   icingadb:
     hostname: db.icinga
@@ -143,7 +143,7 @@ services:
     logging: *default-logging
     networks:
       net:
-        ipv4_address: 172.29.0.12
+        ipv4_address: "${V4_PREFIX:-172.29.0}.12"
 
   # Jednorázový init kontejner – NESMÍ se restartovat do smyčky
   init-icinga2:
@@ -160,7 +160,7 @@ services:
       - ./init-icinga2.sh:/config/init-icinga2.sh
     networks:
       net:
-        ipv4_address: 172.29.0.13
+        ipv4_address: "${V4_PREFIX:-172.29.0}.13"
 
   icingaweb:
     hostname: web.icinga
@@ -196,7 +196,7 @@ services:
       - icingaweb:/data
     networks:
       net:
-        ipv4_address: 172.29.0.14
+        ipv4_address: "${V4_PREFIX:-172.29.0}.14"
 
   icinga2:
     hostname: api.icinga
@@ -235,7 +235,7 @@ services:
       - ./icinga2.conf.d:/custom_data/custom.conf.d
     networks:
       net:
-        ipv4_address: 172.29.0.15
+        ipv4_address: "${V4_PREFIX:-172.29.0}.15"
 
   director:
     hostname: director.icinga
@@ -254,23 +254,6 @@ services:
         echo "Starting Icinga Director daemon."
         icingacli director daemon run
     depends_on:
-#      mysql:
-#        condition: service_healthy
-#        restart: true
-#      icingadb-redis:
-#        condition: service_healthy
-#        restart: true
-#      icingadb:
-#        condition: service_healthy
-#        restart: true
-#      init-icinga2:
-#        condition: service_completed_successfully
-#      icingaweb:
-#        condition: service_healthy
-#        restart: true
-#      icinga2:
-#        condition: service_healthy
-#        restart: true
       mysql:          { condition: service_healthy }
       icingadb-redis: { condition: service_healthy }
       icingadb:       { condition: service_healthy }
@@ -292,4 +275,4 @@ services:
       - icingaweb:/data
     networks:
       net:
-        ipv4_address: 172.29.0.16
+        ipv4_address: "${V4_PREFIX:-172.29.0}.16"
