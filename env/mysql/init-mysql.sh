@@ -14,6 +14,5 @@ FLUSH PRIVILEGES;
 SQL
 }
 
-create_database_and_user director  director  "${ICINGA_DIRECTOR_MYSQL_PASSWORD:-director}"
-create_database_and_user icingadb  icingadb  "${ICINGADB_MYSQL_PASSWORD:-icingadb}"
-create_database_and_user icingaweb icingaweb "${ICINGAWEB_MYSQL_PASSWORD:-icingaweb}"
+create_database_and_user icingadb  icingadb  "${ICINGADB_MYSQL_PASSWORD:?}"
+create_database_and_user icingaweb icingaweb "${ICINGAWEB_MYSQL_PASSWORD:?}"

@@ -3,6 +3,7 @@
 
 # Except those related to Git (and GitHub)
 !.git*
+!.env.example
 
 # Excluded dirs
 etc

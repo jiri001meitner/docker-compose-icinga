@@ -26,11 +26,51 @@ and `docker compose down -v` to remove the deployed configuration.
 If nftables rules were deployed for an application, for example, using the `docker_first_deploy.sh` script, note that they will not be removed from `/etc/nftables.d/` even when running `docker compose down -v`.
 Verify the services are healthy with `docker ps` or `docker compose ps`.
 
-Icinga Web is provided on **127.0.0.3:8080** and you can access the Icinga 2 API on **127.0.0.3:5665**.
-The MariaDB service runs version **11.8** and uses the root password defined by the
-`MYSQL_ROOT_PASSWORD` environment variable (default: `icingaroot`).
-The default user of Icinga Web is `icingaadmin` with password `icinga` and
-the default user of the Icinga 2 API for Web is `icingaweb` with password `icingaweb`.
+### Configuration (`.env`)
+
+Copy `.env.example` to `.env` (`chmod 600`) and fill it in before the first
+start. All passwords are required; `docker compose` refuses to start without
+them, so no well-known default password ever ends up in a deployment.
+
+| variable | purpose |
+|---|---|
+| `MYSQL_ROOT_PASSWORD` | MariaDB root (version **11.8**) |
+| `ICINGADB_MYSQL_PASSWORD`, `ICINGAWEB_MYSQL_PASSWORD` | database users of Icinga DB and Icinga Web 2 |
+| `ICINGAWEB_ICINGA2_API_USER_PASSWORD` | Icinga 2 API user `icingaweb` |
+| `ICINGAWEB_ADMIN_PASSWORD` | Icinga Web 2 login `icingaadmin` |
+| `SOCKET_UID`, `SOCKET_GID`, `SOCKET_DIR` | owner and directory of the UNIX sockets |
+| `V4_PREFIX`, `V6_PREFIX` | network prefixes (default `172.29.0`, `fd00:d0c:29`) |
+
+The database passwords are applied only when MariaDB initialises an empty
+volume (`env/mysql/init-mysql.sh`), and the API user only when
+`conf.d/icingaweb-api-user.conf` does not exist yet. Changing them later means
+`ALTER USER` in MariaDB and editing that file in the `icinga2` volume.
+
+### Access via UNIX sockets
+
+No port is published. Two socat sidecars expose Icinga Web 2 as
+`$SOCKET_DIR/web.sock` (→ 8080) and the Icinga 2 API as `$SOCKET_DIR/api.sock`
+(→ 5665) for a reverse proxy (e.g. Caddy `reverse_proxy unix//run/icinga/web.sock`).
+Create the directory before the containers start, e.g. with systemd-tmpfiles:
+`d /run/icinga 2770 1000 caddy -`.
+
+The sidecars run in the network namespace of their service
+(`network_mode: service:…`). Whenever `icingaweb` or `icinga2` is recreated,
+recreate the sidecars too, otherwise the proxy gets `EOF`/502:
+
+```bash
+docker compose up -d --force-recreate --no-deps icingaweb-socket icinga2-socket
+```
+
+### Notes
+
+- `icinga2` gets `net.ipv4.ping_group_range` for the `icinga` group (GID 5665);
+  without it `check_ping` fails with `Could not interpret output from ping command`.
+- Icinga DB does not migrate its schema itself. After a newer `icinga/icingadb`
+  image (`unexpected database schema version: vN (expected vM)`) apply the files
+  from `schema/mysql/upgrades/` of the matching Icinga DB release, e.g.
+  `docker exec -i <mysql> sh -c 'mariadb -uroot -p"$MYSQL_ROOT_PASSWORD" icingadb' < 1.6.0.sql`.
+- Icinga Director is not part of the stack.
 
 ## Helper scripts and nftables
 
