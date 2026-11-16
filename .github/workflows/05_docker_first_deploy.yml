@@ -14,6 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Use CI environment (.env.ci -> .env)
+        run: cp .env.ci .env
+
       - name: docker_first_deploy
         shell: bash
         run: |

@@ -30,7 +30,7 @@ jobs:
           fi
 
           # Unikátní složky
-          mapfile -t FILES < <(git ls-files | grep -E '(^|/)(docker-compose|compose)\.ya?ml$' | grep -vE '^\.github/' || true)
+          mapfile -t DIRS < <(printf '%s\n' "${FILES[@]}" | grep -vE '^\.github/' | xargs -r -n1 dirname | sort -u)
 
           failed=0
           for d in "${DIRS[@]}"; do

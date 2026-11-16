@@ -4,6 +4,7 @@
 # Except those related to Git (and GitHub)
 !.git*
 !.env.example
+!.env.ci
 
 # Excluded dirs
 etc

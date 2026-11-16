@@ -15,6 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Use CI environment (.env.ci -> .env)
+        run: cp .env.ci .env
+
       - name: Compose up -d
         run: |
           docker compose up -d

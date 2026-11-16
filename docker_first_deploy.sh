@@ -10,6 +10,7 @@ help5(){ echo "The nftables package appears to be missing. Please install it fir
 help6(){ { echo "The jq package appears to be missing.";
          echo "This script uses it to modify /etc/docker/daemon.json. Please install it first."; } | STDERR; exit 6; }
 help7(){ echo "You chose not to continue, exiting." | STDERR; exit 7; }
+help9(){ echo "Missing .env: copy .env.example to .env (chmod 600) and fill in the passwords." | STDERR; exit 9; }
 help8(){ echo "The 'nftables.service' must be enabled and active. OR you can build icinga with docker compose up -d, don't use this script ${0} without nftables." | STDERR; exit 8; }
 
 usage(){ {
@@ -35,6 +36,7 @@ if ! ver="$(docker compose version --short)"; then
 fi
 [[ "${ver%%.*}" == "2" ]] || help2
 
+[[ -f .env ]] || help9
 docker compose config >/dev/null || help4
 
 [[ -f /etc/nftables.conf ]] || help5
